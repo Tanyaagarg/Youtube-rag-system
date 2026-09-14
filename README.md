@@ -1,131 +1,87 @@
-# ClipIQ: YouTube Intelligence Engine
+# ClipIQ
 
-<p align="center"><strong>RAG-powered video understanding with timestamp-grounded Q&A and production-ready UX.</strong></p>
+Turn any YouTube video into something you can search, question, and get straight answers from — grounded in the actual transcript, with clickable timestamps back to the exact moment.
 
 <p align="center">
   <img alt="Python" src="https://img.shields.io/badge/Python-3.11-3776AB?style=flat-square&logo=python&logoColor=white" />
   <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-0.115-009688?style=flat-square&logo=fastapi&logoColor=white" />
-  <img alt="Pydantic" src="https://img.shields.io/badge/Pydantic-2.9-E92063?style=flat-square&logo=pydantic&logoColor=white" />
-  <img alt="LangChain" src="https://img.shields.io/badge/LangChain-0.3-1C3C3C?style=flat-square&logo=chainlink&logoColor=white" />
+  <img alt="LangChain" src="https://img.shields.io/badge/LangChain-0.3-1C3C3C?style=flat-square" />
   <img alt="ChromaDB" src="https://img.shields.io/badge/ChromaDB-0.4-5A3EE6?style=flat-square" />
-  <img alt="Ollama" src="https://img.shields.io/badge/Ollama-Embeddings-000000?style=flat-square" />
-  <img alt="OpenRouter" src="https://img.shields.io/badge/OpenRouter-LLM-4F46E5?style=flat-square" />
   <img alt="React" src="https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black" />
   <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5.8-3178C6?style=flat-square&logo=typescript&logoColor=white" />
-  <img alt="Vite" src="https://img.shields.io/badge/Vite-6-646CFF?style=flat-square&logo=vite&logoColor=white" />
   <img alt="Tailwind CSS" src="https://img.shields.io/badge/Tailwind-4.1-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white" />
 </p>
 
-<p align="center">
-  <img src="frontend/public/landingpage.png" alt="ClipIQ landing placeholder" />
-</p>
+## What it does
 
-## What ClipIQ Does
-ClipIQ transforms long YouTube videos into verifiable intelligence:
-- executive summaries with key takeaways
-- evidence-grounded chat answers
-- clickable timestamps for instant seek
-- history restore for continued sessions
+Paste a YouTube URL. ClipIQ pulls the transcript and metadata, chunks and embeds it, and gives you two ways to use it:
 
-## Key Capabilities
-### Single-video intelligence
-- URL ingestion with transcript + metadata extraction
-- adaptive chunking and vector indexing
-- chat mode with grounded answers and timestamp sources
-- summary generation with starter prompts
+- **Summary** — an executive-style overview with key takeaways, generated from the full transcript.
+- **Chat** — ask anything about the video and get an answer grounded in the transcript, with a clickable timestamp that seeks the embedded player straight to that moment.
 
-### Retrieval and grounding quality
-- hybrid retrieval (self-query, dense, lexical, temporal expansion)
-- timestamp alignment and chip-safe emission rules
-- fallback handling for unsupported / out-of-scope queries
-- transcript ingestion fallbacks for robust caption retrieval paths
+Every past video you've processed is saved locally and browsable from a history view, so you can jump back into a summary or chat without reprocessing.
 
-### Product UX
-- responsive desktop + mobile layouts
-- smooth scrolling and route sync
-- global toast alerts for system feedback
-- paginated history views and session restore
+## How it works
 
-## System Architecture
-```text
-User Input (URL / Question)
-  -> FastAPI Route Layer
-  -> RAG Pipeline
-  -> Transcript + Metadata + Chunking
-  -> Embeddings + Chroma persistent index
-  -> Hybrid Retrieval + Ranking + Grounding
-  -> LLM Response Policy + Formatting
-  -> Frontend Chat/Summary UI + Timestamp Seek
+```
+YouTube URL
+  → transcript + metadata fetch (with fallback handling for flaky/missing captions)
+  → chunking
+  → local embeddings (Ollama / BGE-M3) → Chroma vector index
+  → retrieval (self-query + semantic + timestamp-aware ranking)
+  → LLM response (OpenRouter) → summary or grounded chat answer
 ```
 
-## Repository Structure
-```text
-YoutubeRAGSystem/
-  backend/
-    app/
-      config.py
-      schemas.py
-      routes/
-        video.py
-      rag/
-        pipeline.py                # single-video orchestration
-        transcript.py              # transcript + metadata ingestion
-        retriever.py               # Chroma + retriever builders
-        retrieval_helpers.py       # ranking/timestamp helper utilities
-        policy_helpers.py          # route/policy classification helpers
-        embeddings.py              # safe embedding wrapper + sanitization
-    main.py
-    requirements.txt
-    .env.example
-  frontend/
-    public/
-      ytlogo.svg
-    src/
-      components/
-      pages/
-      lib/
-      App.tsx
-      main.tsx
-      index.css
-    package.json
-    .env.example
-  notebooks/
-  README.md
+## Tech stack
+
+| Layer | Tools |
+|---|---|
+| Backend | FastAPI, Pydantic, LangChain |
+| Retrieval | ChromaDB, self-query retrieval, hybrid ranking |
+| Embeddings | Ollama (local, BGE-M3) |
+| LLM | OpenRouter |
+| Metadata | YouTube Data API |
+| Frontend | React 19, TypeScript, Vite, Tailwind CSS 4, Framer Motion |
+
+## Project layout
+
+```
+backend/
+  app/
+    config.py          env + model setup
+    schemas.py          request/response models
+    routes/video.py    API endpoints
+    rag/
+      pipeline.py            transcript → chunk → embed → retrieve → answer
+      transcript.py          transcript + metadata fetch, fallback handling
+      retriever.py           Chroma vector store + self-query retriever
+      retrieval_helpers.py   ranking, timestamp extraction/alignment
+      policy_helpers.py      routes a message to CHAT / RAG / SUMMARY
+      embeddings.py          embedding wrapper with input sanitization
+  main.py
+  requirements.txt
+
+frontend/
+  src/
+    pages/       Dashboard, Summarize, SummaryResult, History, Landing
+    components/  Sidebar, BottomNav, Layout, GlobalToast
+    lib/         api.ts (backend calls), history.ts (local history store)
 ```
 
-## Backend RAG Modules
-- `pipeline.py`: single-video processing, chat, summary, cleanup
-- `transcript.py`: video ID parsing, metadata fetch, transcript extraction/fallback, chunk prep
-- `retriever.py`: Chroma vectorstore create/load/delete + self-query retriever wiring
-- `retrieval_helpers.py`: hybrid ranking, timestamp extraction/alignment, lexical fallback
-- `policy_helpers.py`: response policy classification (`CHAT`, `RAG`, `SUMMARY`)
-- `embeddings.py`: embedding safety layer, input sanitization, retry robustness
+## Running it locally
 
-## API Surface
-- `GET /`: root health message
-- `GET /api/health`: API health check
-- `POST /api/process`: process single video
-- `POST /api/chat`: single-video chat
-- `POST /api/summary`: single-video summary
-- `POST /api/cleanup`: remove session + persisted artifacts
+**Prerequisites:** Python 3.11, Node.js 18+, [Ollama](https://ollama.com) running locally, an OpenRouter API key, and a Google (YouTube Data API) key.
 
-## Quick Start
-### Prerequisites
-- Python `3.11.x`
-- Node.js `18+`
-- Ollama available locally for embedding model usage
-- OpenRouter and Google API keys
-
-### Backend setup
+**Backend**
 ```bash
 cd backend
 python -m venv venv
-venv\Scripts\activate
+venv\Scripts\activate      # or: source venv/bin/activate on macOS/Linux
 pip install -r requirements.txt
 uvicorn main:app --reload --port 8000
 ```
 
-### Frontend setup
+**Frontend**
 ```bash
 cd frontend
 npm install
@@ -134,44 +90,31 @@ npm run dev
 
 Open `http://localhost:3000`.
 
-## Environment Variables
-Place values in `backend/.env`:
+## Environment variables
 
-- `OPENROUTER_API_KEY`: OpenRouter key for response generation
-- `OPENROUTER_MODEL`: model identifier used by backend
-- `GOOGLE_API_KEY`: YouTube Data API key for metadata
-- `HUGGINGFACEHUB_API_TOKEN`: optional alternative model token
-- `OLLAMA_EMBEDDING_MODEL`: local embedding model name (default `bge-m3`)
-- `FRONTEND_ORIGIN`: CORS origin for frontend
-- `CHROMA_PERSIST_DIR`: optional custom Chroma persistence path
+Copy `backend/.env.example` to `backend/.env` and fill in:
 
-## Troubleshooting
-### Transcript appears available but processing fails
-- Check backend logs for network restrictions to YouTube endpoints.
-- On Windows, `WinError 10013` indicates firewall/proxy/socket blocking.
-- Run cleanup and reprocess the video after network access is restored.
+| Variable | Purpose |
+|---|---|
+| `OPENROUTER_API_KEY` | LLM calls (summary + chat generation) |
+| `OPENROUTER_MODEL` | which model to route through OpenRouter |
+| `GOOGLE_API_KEY` | YouTube Data API, for video metadata |
+| `OLLAMA_EMBEDDING_MODEL` | local embedding model name (default `bge-m3`) |
+| `FRONTEND_ORIGIN` | CORS origin allowed to call the backend |
+| `CHROMA_PERSIST_DIR` | optional custom path for the vector store |
 
-### Chroma telemetry warnings
-- Telemetry is disabled in config/retriever paths.
-- If warnings persist in stale envs, reinstall with pinned requirements and restart backend.
+## API
 
-### Dependency validation
-```bash
-pip check
-python -m py_compile app/rag/pipeline.py app/rag/transcript.py
-```
+| Endpoint | Purpose |
+|---|---|
+| `GET /api/health` | health check |
+| `POST /api/process` | fetch transcript + metadata, build the vector index |
+| `POST /api/chat` | ask a question about a processed video |
+| `POST /api/summary` | generate the executive summary |
+| `POST /api/cleanup` | drop a session's cached/persisted data |
 
-## Development Notes
-- Session state is kept in-memory by `session_id`.
-- Vector indexes persist in backend `.chroma_db`.
-- Cleanup endpoint supports deleting both session cache and persisted indexes.
+## Notes
 
-## Roadmap
-- streaming responses for better perceived latency
-- regression evaluation set for timestamp accuracy
-- telemetry for retrieval quality and latency diagnostics
-- optional external session store (Redis/DB)
-
-<p align="center">
-  Built with focused iteration on retrieval quality, grounding accuracy, and UX clarity.
-</p>
+- Session state lives in memory, keyed by `session_id` — it resets when the backend restarts, and every video gets re-embedded from scratch on the next request. `CHROMA_PERSIST_DIR` is configured but disk persistence across restarts isn't actually working yet — a known gap, not a documented feature.
+- History is stored entirely in the browser's `localStorage` — nothing is tracked server-side per user.
+- Long videos take a while to process: each transcript chunk is embedded twice (once to validate, once to index), with no batching — a real video-processing bottleneck worth optimizing.
