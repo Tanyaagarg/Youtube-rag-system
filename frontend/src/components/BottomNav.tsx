@@ -1,0 +1,36 @@
+import { Link, useLocation } from "react-router-dom";
+import { Home, Clock, FileText } from "lucide-react";
+import { cn } from "../lib/utils";
+
+const NAV_ITEMS = [
+  { label: "Home", icon: Home, href: "/dashboard" },
+  { label: "Summarize", icon: FileText, href: "/summarize" },
+  { label: "History", icon: Clock, href: "/history" },
+];
+
+export function BottomNav() {
+  const location = useLocation();
+
+  return (
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-[#13100b]/95 backdrop-blur-xl border-t border-white/10 z-[9999]">
+      <div className="flex justify-around items-center h-full px-2">
+        {NAV_ITEMS.map((item) => {
+          const isActive = location.pathname === item.href;
+          return (
+            <Link
+              key={item.href}
+              to={item.href}
+              className={cn(
+                "flex flex-col items-center justify-center w-full h-full gap-1 transition-colors",
+                isActive ? "text-amber-500" : "text-gray-500 hover:text-gray-300"
+              )}
+            >
+              <item.icon className="w-5 h-5" />
+              <span className="text-[10px] font-medium">{item.label}</span>
+            </Link>
+          );
+        })}
+      </div>
+    </nav>
+  );
+}

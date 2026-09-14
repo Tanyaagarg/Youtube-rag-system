@@ -1,0 +1,143 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,300;1,9..144,400;1,9..144,500;1,9..144,600;1,9..144,700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Fraunces", serif;
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-overflow-scrolling: touch;
+    overflow-x: hidden;
+    width: 100%;
+  }
+
+  body {
+    @apply bg-[#0b0906] text-white;
+    -webkit-overflow-scrolling: touch;
+    overflow-x: hidden;
+    width: 100%;
+  }
+}
+
+/* Custom scrollbar for a cleaner look - Unified Dark Grey Style */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Hide scrollbars on mobile */
+@media (max-width: 768px) {
+  ::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee 30s linear infinite;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+@keyframes glow {
+
+  0%,
+  100% {
+    opacity: 0.5;
+    filter: blur(10px);
+  }
+
+  50% {
+    opacity: 0.8;
+    filter: blur(15px);
+  }
+}
+
+.glow {
+  animation: glow 2s ease-in-out infinite;
+}
+
+@keyframes thinkingShimmer {
+  0% {
+    background-position: -180% 0;
+  }
+
+  100% {
+    background-position: 180% 0;
+  }
+}
+
+.thinking-shimmer {
+  background-image: linear-gradient(90deg, rgba(147, 197, 253, 0.45) 0%, rgba(255, 255, 255, 0.98) 50%, rgba(147, 197, 253, 0.45) 100%);
+  background-size: 220% 100%;
+  background-position: -180% 0;
+  animation: thinkingShimmer 2.2s linear infinite;
+  will-change: background-position;
+  display: inline-block;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+/* Sonner toast hard-center override */
+[data-sonner-toaster] {
+  width: 100% !important;
+  max-width: 100% !important;
+  display: flex !important;
+  justify-content: center !important;
+  padding-left: 0.5rem !important;
+  padding-right: 0.5rem !important;
+  box-sizing: border-box !important;
+  left: 50% !important;
+  right: auto !important;
+  transform: translateX(-50%) !important;
+}
+
+[data-sonner-toaster] [data-sonner-toast] {
+  align-self: center !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
