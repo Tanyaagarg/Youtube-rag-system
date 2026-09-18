@@ -115,6 +115,8 @@ Copy `backend/.env.example` to `backend/.env` and fill in:
 
 ## Notes
 
-- Session state lives in memory, keyed by `session_id` — it resets when the backend restarts, and every video gets re-embedded from scratch on the next request. `CHROMA_PERSIST_DIR` is configured but disk persistence across restarts isn't actually working yet — a known gap, not a documented feature.
-- History is stored entirely in the browser's `localStorage` — nothing is tracked server-side per user.
-- Long videos take a while to process: each transcript chunk is embedded twice (once to validate, once to index), with no batching — a real video-processing bottleneck worth optimizing.
+- **Vector indexes persist** to `backend/.chroma_db`, so a restart doesn't re-embed videos — reprocessing a known video loads it from disk in about a second.
+- **Each chunk is embedded once.** The vectors computed while validating chunks are inserted straight into Chroma rather than recomputed.
+- **Sessions survive restarts.** Chat history, summaries and starter questions are mirrored to `backend/.session_store/` (one JSON file per session, expired after 7 days via `SESSION_TTL_SECONDS`). Live objects stay in memory; this store is a small module (`rag/session_store.py`) meant to be swapped for Redis when running multiple servers.
+- History of analysed videos is stored in the browser's `localStorage`.
+- Embedding runs on CPU through Ollama at roughly one second per chunk, so long videos still take a few minutes on first processing.

@@ -18,6 +18,7 @@ from app.schemas import (
 )
 from app.rag.pipeline import (
     get_or_create_session,
+    persist_session,
     process_video,
     chat_with_video,
     summarize_video,
@@ -69,6 +70,7 @@ async def chat_endpoint(req: ChatRequest):
         # Ensure session exists
         get_or_create_session(req.session_id)
         result = chat_with_video(req.session_id, req.video_url, req.message)
+        persist_session(req.session_id)
         return ChatResponse(**result)
     except Exception as e:
         logger.exception("Error in chat: %s", e)
@@ -81,6 +83,7 @@ async def summary_endpoint(req: SummaryRequest):
     try:
         get_or_create_session(req.session_id)
         result = summarize_video(req.session_id, req.video_url)
+        persist_session(req.session_id)
         return SummaryResponse(**result)
     except Exception as e:
         logger.exception("Error generating summary: %s", e)

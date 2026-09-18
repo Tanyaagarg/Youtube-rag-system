@@ -7,7 +7,7 @@ import math
 import time
 import unicodedata
 import logging
-from typing import List
+from typing import List, Tuple
 
 from langchain_ollama import OllamaEmbeddings
 from langchain_core.documents import Document
@@ -93,12 +93,19 @@ embeddings = SafeOllamaEmbeddings(model=OLLAMA_EMBEDDING_MODEL)
 
 def validate_chunks_for_embeddings(
     chunks: List[Document],
-) -> List[Document]:
+) -> Tuple[List[Document], List[List[float]]]:
     """
     Validates chunks by attempting embeddings, removing garbled text,
     merging failed chunks with neighbors.
+
+    Returns the validated chunks together with their embedding vectors, so the
+    caller can index them directly instead of embedding every chunk a second time.
     """
     validated_chunks: List[Document] = []
+    vectors: List[List[float]] = []
+    # Indexes whose text changed after embedding (a failed chunk was merged in),
+    # so their vector no longer matches and must be recomputed.
+    stale_indexes = set()
 
     for chunk in chunks:
         content = (chunk.page_content or "").strip()
@@ -116,6 +123,7 @@ def validate_chunks_for_embeddings(
 
         # Attempt embedding with retry
         success = False
+        flat: List[float] = []
         for attempt in range(2):
             try:
                 vec = embeddings.embed_query(content)
@@ -142,6 +150,7 @@ def validate_chunks_for_embeddings(
             validated_chunks.append(
                 Document(page_content=content, metadata=chunk.metadata)
             )
+            vectors.append(flat)
         else:
             # Merge with previous validated chunk
             if validated_chunks:
@@ -150,10 +159,19 @@ def validate_chunks_for_embeddings(
                 validated_chunks[-1] = Document(
                     page_content=merged, metadata=prev.metadata
                 )
+                stale_indexes.add(len(validated_chunks) - 1)
+
+    for idx in sorted(stale_indexes):
+        try:
+            vectors[idx] = embeddings.embed_query(validated_chunks[idx].page_content)
+        except Exception as e:
+            # Keep the pre-merge vector: it still represents most of the chunk.
+            logger.warning("Re-embedding merged chunk %d failed: %s", idx, e)
 
     logger.info(
-        "Validated %d/%d chunks for embedding",
+        "Validated %d/%d chunks for embedding (%d re-embedded after merge)",
         len(validated_chunks),
         max(1, len(chunks)),
+        len(stale_indexes),
     )
-    return validated_chunks
+    return validated_chunks, vectors

@@ -46,10 +46,16 @@ from app.rag.policy_helpers import (
     get_response_policy,
     is_meta_chat_query,
 )
+from app.rag.session_store import (
+    delete_session_state,
+    load_session_state,
+    prune_expired_sessions,
+    save_session_state,
+)
 
 logger = logging.getLogger(__name__)
 
-#  In-memory session store 
+#  Session store: live objects in memory, durable parts mirrored to disk
 sessions: Dict[str, dict] = {}
 
 
@@ -86,14 +92,29 @@ def _looks_not_found_response(text: str) -> bool:
 def get_or_create_session(session_id: Optional[str] = None) -> str:
     if session_id and session_id in sessions:
         return session_id
+
+    # Not in memory (e.g. after a restart): restore durable state from disk.
+    saved = load_session_state(session_id) if session_id else None
+    if saved is None:
+        prune_expired_sessions()
     new_id = session_id or str(uuid.uuid4())
     sessions[new_id] = {
-        "history": ChatMessageHistory(),
+        "history": ChatMessageHistory(messages=saved["messages"] if saved else []),
+        # Rebuilt lazily from the persisted Chroma index by process_video().
         "processed_videos": {},
-        "summary_cache": {},
-        "starter_questions_cache": {},
+        "summary_cache": saved["summary_cache"] if saved else {},
+        "starter_questions_cache": saved["starter_questions_cache"] if saved else {},
     }
+    if saved:
+        logger.info("Restored session %s from disk", new_id)
     return new_id
+
+
+def persist_session(session_id: str) -> None:
+    """Save a session's chat history and summary caches so restarts don't lose them."""
+    session = sessions.get(session_id)
+    if session is not None:
+        save_session_state(session_id, session)
 
 
 def _build_summary_source_text(chunks, max_chars: int = 45000) -> str:
@@ -897,6 +918,9 @@ def cleanup_video_artifacts(
     removed_summary_entries = 0
     removed_starter_entries = 0
 
+    if session_id and session_id not in sessions and load_session_state(session_id):
+        get_or_create_session(session_id)  # restore from disk so it can be cleaned
+
     if session_id and session_id in sessions:
         session = sessions[session_id]
         for video_id in video_ids:
@@ -909,6 +933,9 @@ def cleanup_video_artifacts(
 
         if drop_session:
             sessions.pop(session_id, None)
+            delete_session_state(session_id)
+        else:
+            persist_session(session_id)
 
     removed_persisted_indexes = 0
     removed_transcript_caches = 0

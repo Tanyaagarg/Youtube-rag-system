@@ -4,6 +4,7 @@ Vector store creation and self-query retriever setup.
 
 import re
 import math
+import uuid
 import logging
 from typing import List, Optional, Dict, Tuple
 
@@ -71,11 +72,20 @@ query_constructor = load_query_constructor_runnable(
 
 
 def _chroma_client_settings():
-    """Disable noisy telemetry events and keep local persistence behavior stable."""
+    """Disable noisy telemetry events and keep local persistence behavior stable.
+
+    is_persistent must be set explicitly: when langchain_chroma receives
+    client_settings it uses them as-is and skips its own is_persistent=True,
+    which silently made every collection in-memory only (lost on restart).
+    """
     if ChromaSettings is None:
         return None
     try:
-        return ChromaSettings(anonymized_telemetry=False)
+        return ChromaSettings(
+            anonymized_telemetry=False,
+            is_persistent=True,
+            persist_directory=CHROMA_PERSIST_DIR,
+        )
     except Exception:
         return None
 
@@ -106,20 +116,30 @@ def create_vectorstore_for_video(
     for c in chunks:
         c.metadata.setdefault("video_id", video_id)
 
-    validated = validate_chunks_for_embeddings(chunks)
+    validated, vectors = validate_chunks_for_embeddings(chunks)
     if not validated:
         logger.warning("No valid chunks after validation for video %s", video_id)
         return None
 
     chroma_kwargs = {
         "collection_name": collection_name,
+        "embedding_function": embeddings,
         "persist_directory": CHROMA_PERSIST_DIR,
     }
     settings = _chroma_client_settings()
     if settings is not None:
         chroma_kwargs["client_settings"] = settings
 
-    return Chroma.from_documents(validated, embeddings, **chroma_kwargs)
+    vectorstore = Chroma(**chroma_kwargs)
+    # Insert the vectors computed during validation directly. Chroma.from_documents
+    # would embed every chunk again, doubling the slowest step of processing.
+    vectorstore._collection.upsert(
+        ids=[str(uuid.uuid4()) for _ in validated],
+        embeddings=vectors,
+        documents=[d.page_content for d in validated],
+        metadatas=[dict(d.metadata) for d in validated],
+    )
+    return vectorstore
 
 
 def build_self_query_retriever(

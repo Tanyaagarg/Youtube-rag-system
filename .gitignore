@@ -20,6 +20,7 @@ clipiq/node_modules/
 # ─── Ollama / ChromaDB ───────────────
 backend/.chroma_db/
 backend/.transcript_cache/
+backend/.session_store/
 
 # ─── Logs ─────────────────────────────
 *.log
